@@ -14,13 +14,11 @@ namespace kk {
 
 class CodeStyleConsumer : public ASTConsumer {
     CompilerInstance &CI;
-    llvm::StringRef &InFile;
     std::unique_ptr<clang::ASTConsumer> codegenConsumer;
 
   public:
-    CodeStyleConsumer(CompilerInstance &CI_, llvm::StringRef &InFile_, std::unique_ptr<clang::ASTConsumer> codegenConsumer_)
+    CodeStyleConsumer(CompilerInstance &CI_, std::unique_ptr<clang::ASTConsumer> codegenConsumer_)
         : CI(CI_)
-        , InFile(InFile_)
         , codegenConsumer(std::move(codegenConsumer_)) {
 
         const FrontendOptions &FEOpts = CI.getFrontendOpts();
@@ -172,6 +170,6 @@ std::unique_ptr<clang::ASTConsumer> plugin_entry_create_consumer(std::unique_ptr
     if (!CI) {
         return codegenConsumer;
     }
-    return std::make_unique<kk::CodeStyleConsumer>(*CI, InFile, std::move(codegenConsumer));
+    return std::make_unique<kk::CodeStyleConsumer>(*CI, std::move(codegenConsumer));
 }
 }

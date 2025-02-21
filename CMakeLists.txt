@@ -3,18 +3,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 else()
   # used when build inside the clang tool/extra folder
   set(BUILD_CODE_STYLE_OUTSIDE_LLVM OFF)
-  include_directories(BEFORE
-    ${LLVM_SOURCE_DIR}/include
-    ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include
-    ${LLVM_BINARY_DIR}/include
-    ${LLVM_BINARY_DIR}/tools/clang/include
-  )
-
-endif()
-
-message(STATUS "BUILD_CODE_STYLE_OUTSIDE_LLVM: ${BUILD_CODE_STYLE_OUTSIDE_LLVM}")
-
-if (NOT BUILD_CODE_STYLE_OUTSIDE_LLVM)
   cmake_minimum_required(VERSION 3.20.0)
   project(CheckerCodeStylePlugin)
   message(STATUS "Build out of LLVM project")
@@ -25,14 +13,17 @@ if (NOT BUILD_CODE_STYLE_OUTSIDE_LLVM)
   message(STATUS "LLVM_SOURCE_DIR: ${LLVM_SOURCE_DIR}")
   message(STATUS "LLVM_BINARY_DIR: ${LLVM_BINARY_DIR}")
   message(STATUS "LLVM_EXTERNAL_CLANG_SOURCE_DIR: ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
+
   include_directories(BEFORE
     ${LLVM_SOURCE_DIR}/include
     ${LLVM_EXTERNAL_CLANG_SOURCE_DIR}/include
     ${LLVM_BINARY_DIR}/include
     ${LLVM_BINARY_DIR}/tools/clang/include
   )
+
 endif()
 
+message(STATUS "BUILD_CODE_STYLE_OUTSIDE_LLVM: ${BUILD_CODE_STYLE_OUTSIDE_LLVM}")
 add_llvm_library(CheckerCodeStylePlugin MODULE
   plugin/CodeStyle.cpp
 

@@ -28,7 +28,7 @@ using PluginEntryFunc = std::unique_ptr<clang::ASTConsumer> (*)(std::unique_ptr<
 CodeGenActionCreateASTConsumerFunc original_CodeGenActionCreateASTConsumerFunc = nullptr;
 GenerateCC1CommandLineFunc original_GenerateCC1CommandLineFunc = nullptr;
 CreateFromArgsImplFunc original_CreateFromArgsImplFunc = nullptr;
-static std::unique_ptr<clang::ASTConsumer> hooked_CodeGenActionCreateASTConsumerFunc(clang::CodeGenAction *AC, clang::CompilerInstance *CI, llvm::StringRef InFile) {
+static std::unique_ptr<clang::ASTConsumer> hooked_CodeGenActionCreateASTConsumerFunc(clang::CodeGenAction *CG, clang::CompilerInstance *CI, llvm::StringRef InFile) {
 
     auto &Diag = CI->getDiagnostics();
     auto executablePath = fs::canonical(_dyld_get_image_name(0));
@@ -43,7 +43,8 @@ static std::unique_ptr<clang::ASTConsumer> hooked_CodeGenActionCreateASTConsumer
         return nullptr;
     }
 
-    auto codegenConsumer = original_CodeGenActionCreateASTConsumerFunc(AC, CI, InFile);
+    auto codegenConsumer = original_CodeGenActionCreateASTConsumerFunc(CG, CI, InFile);
+
     void *targetAddr = lib.getAddressOfSymbol("plugin_entry_create_consumer");
     if (targetAddr == nullptr) {
         errs() << "canot load plugin: " << pluginPath << " missing symbol: plugin_entry_create_consumer" << '\n';
@@ -84,15 +85,16 @@ static bool hooked_CreateFromArgsImplFunc(CompilerInvocation &Res, ArrayRef<cons
     if (!success) {
         return success;
     }
-    FrontendOptions &FEOpts = Res.getFrontendOpts();
-    // 保存到 FrontendOptions 的 Plugins 和 PluginArgs
-    std::map<std::string, std::vector<std::string>> backup;
-    std::swap(backup, FEOpts.PluginArgs);
-    for (const auto &pair : pluginArgsMap) {
-        backup.insert_or_assign(pair.first, pair.second);
+    if (!pluginArgsMap.empty()) {
+        FrontendOptions &FEOpts = Res.getFrontendOpts();
+        // 保存到 FrontendOptions 的 Plugins 和 PluginArgs
+        std::map<std::string, std::vector<std::string>> backup;
+        std::swap(backup, FEOpts.PluginArgs);
+        for (const auto &pair : pluginArgsMap) {
+            backup.insert_or_assign(pair.first, pair.second);
+        }
+        std::swap(FEOpts.PluginArgs, backup);
     }
-    std::swap(FEOpts.PluginArgs, backup);
-
 
     return success;
 }
@@ -101,6 +103,11 @@ static __attribute__((__constructor__)) void InjectPlugin(int argc, char *argv[]
 
     auto executablePath = fs::canonical(argv[0]);
     const auto executable = executablePath.c_str();
+
+    if (argc >= 2 && strcmp(argv[1], "-Xlinker") == 0) {
+        errs() << "skip Clang hook: " << executable << '\n';
+        return;
+    }
 
     errs() << "Applying Clang hook: " << executable << '\n';
 
